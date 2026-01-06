@@ -1,51 +1,26 @@
-import express from 'express'
-import "dotenv/config"
-import cors from "cors"
-import http from "http"
-import connectDB from './lib/db.js';
-import userRouter from './Router/userRouter.js';
-import {Server} from "socket.io"
-import messageRouter from './Router/messageRouter.js';
+import express from "express";
+import "dotenv/config";
+import cors from "cors";
+import connectDB from "./lib/db.js";
+import userRouter from "./Router/userRouter.js";
+import messageRouter from "./Router/messageRouter.js";
 
-// application initiation
 const app = express();
-const PORT = process.env.PORT || 5000;
-const server = http.createServer(app)
 
-export const io = new Server(server,{
-    cors:{origin: "*"}
-})
+// middlewares
+app.use(express.json({ limit: "4mb" }));
+app.use(cors());
 
-export const userSocketMap = {};
+// routes
+app.get("/api/status", (req, res) => {
+  res.send("Hello World!");
+});
 
-io.on("connection",(socket)=>{
-    const userId= socket.handshake.query.userId;
-    console.log("User Connected",userId);
+app.use("/api/auth", userRouter);
+app.use("/api/messages", messageRouter);
 
-    if(userId) userSocketMap[userId] = socket.id;
-    io.emit('getOnlineUsers',Object.keys(userSocketMap));
-    socket.on("disconnect",()=>{
-    console.log("User Disconnected",userId);
-    delete userSocketMap[userId];
-    io.emit('getOnlineUsers',Object.keys(userSocketMap))
-    })
-})
-
-//middewares
-app.use(express.json({limit : "4mb"}))
-app.use(cors())
-
-
-app.use('/api/status',(req,res)=>{
-    res.send('<h1>Hello World!!!!</h1>')
-})
-
-app.use('/api/auth',userRouter);
-app.use('/api/messages',messageRouter);
-
-//Database connection
+// DB connection (allowed)
 await connectDB();
 
-server.listen(PORT,()=>{
-    console.log(`listening at http://localhost:${PORT}`);
-})
+// ❗ DO NOT listen
+export default app;
